@@ -94,6 +94,9 @@ module ActiveMerchant
       PAYMENT_METHOD_NOT_SUPPORTED_ERROR = '155'
       INELIGIBLE_FOR_ISSUING_CREDIT_ERROR = '54'
 
+      # Currently supported SEC codes
+      SUPPORTED_CHECK_FORMATS = %w[CCD PPD TEL WEB POP BOC ARC RCK].freeze
+
       def initialize(options={})
         requires!(options, :login, :password)
         super
@@ -345,6 +348,7 @@ module ActiveMerchant
                   xml.routingNumber(options[:routing_number])
                   xml.accountNumber(options[:account_number])
                   xml.nameOnAccount("#{options[:first_name]} #{options[:last_name]}")
+                  add_check_format(xml, options[:check_format])
                 end
               else
                 xml.creditCard do
@@ -552,6 +556,7 @@ module ActiveMerchant
             xml.nameOnAccount(truncate(check.name, 22))
             xml.bankName(check.bank_name)
             xml.checkNumber(check.number)
+            add_check_format(xml, check.check_format)
           end
         end
       end
@@ -699,6 +704,15 @@ module ActiveMerchant
 
       def add_extra_options_for_cim(xml, options)
         xml.extraOptions("x_delim_char=#{options[:delimiter]}") if options[:delimiter]
+      end
+
+      def add_check_format(xml, check_format)
+        if check_format
+          unless CHECK_METHODS.include?(check_format)
+            raise ArgumentError, "check_format option must be one of: #{SUPPORTED_CHECK_FORMATS.join(', ')}"
+          end
+          xml.echeckType(check_format)
+        end
       end
 
       def create_customer_payment_profile(credit_card, options)

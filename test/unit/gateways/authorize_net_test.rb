@@ -15,7 +15,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
 
     @amount = 100
     @credit_card = credit_card
-    @check = check
+    @check = check(check_format: 'WEB')
     @apple_pay_payment_token = ActiveMerchant::Billing::ApplePayPaymentToken.new(
       {data: 'encoded_payment_data'},
       payment_instrument_name: 'SomeBank Visa',
@@ -218,6 +218,7 @@ class AuthorizeNetTest < Test::Unit::TestCase
         assert_equal 'Bank of Elbonia', doc.at_xpath('//bankName').content
         assert_equal 'Jim Smith', doc.at_xpath('//nameOnAccount').content
         assert_equal '1', doc.at_xpath('//checkNumber').content
+        assert_equal 'WEB', doc.at_xpath('//echeckType').content
         assert_equal '1.00', doc.at_xpath('//transactionRequest/amount').content
       end
     end.respond_with(successful_purchase_response)
@@ -879,13 +880,14 @@ class AuthorizeNetTest < Test::Unit::TestCase
 
   def test_successful_bank_refund
     response = stub_comms do
-      @gateway.refund(50, '12345667', account_type: 'checking', routing_number: '123450987', account_number: '12345667', first_name: 'Louise', last_name: 'Belcher')
+      @gateway.refund(50, '12345667', account_type: 'checking', routing_number: '123450987', account_number: '12345667', first_name: 'Louise', last_name: 'Belcher', check_format: 'WEB')
     end.check_request do |endpoint, data, headers|
       parse(data) do |doc|
         assert_equal 'checking', doc.at_xpath('//transactionRequest/payment/bankAccount/accountType').content
         assert_equal '123450987', doc.at_xpath('//transactionRequest/payment/bankAccount/routingNumber').content
         assert_equal '12345667', doc.at_xpath('//transactionRequest/payment/bankAccount/accountNumber').content
         assert_equal 'Louise Belcher', doc.at_xpath('//transactionRequest/payment/bankAccount/nameOnAccount').content
+        assert_equal 'WEB', doc.at_xpath('//transactionRequest/payment/bankAccount/echeckType').content
       end
     end.respond_with(successful_refund_response)
     assert_success response
